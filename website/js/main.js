@@ -112,7 +112,9 @@ function initActiveNavOnScroll() {
     updateActiveNav(); // Initial check
 }
 
-// Contact Form Handler
+// Contact Form Handler - Formspree Integration
+const FORMSPREE_CONTACT_ENDPOINT = 'https://formspree.io/f/xzznwjvg'; // Same endpoint, different subject
+
 function initContactForm() {
     const form = document.getElementById('contactForm');
     
@@ -124,46 +126,53 @@ function initContactForm() {
             const originalText = submitBtn.textContent;
             
             // Add loading state
+            submitBtn.disabled = true;
             submitBtn.classList.add('loading');
             submitBtn.textContent = 'Sending...';
             
             // Get form data
-            const formData = {
-                name: form.querySelector('#name').value,
-                email: form.querySelector('#email').value,
-                subject: form.querySelector('#subject').value,
-                message: form.querySelector('#message').value
-            };
+            const name = form.querySelector('#name').value.trim();
+            const email = form.querySelector('#email').value.trim();
+            const subject = form.querySelector('#subject').value.trim();
+            const message = form.querySelector('#message').value.trim();
             
-            // Simulate form submission (replace with actual API call)
+            // Prepare data for Formspree
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('name', name);
+            formData.append('_subject', `Contact Form: ${subject}`);
+            formData.append('message', `Contact Form Submission:\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`);
+            
             try {
-                await simulateFormSubmission(formData);
+                // Submit to Formspree
+                const response = await fetch(FORMSPREE_CONTACT_ENDPOINT, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
                 
-                // Show success message
-                showFormMessage('success', 'Thank you! Your message has been sent successfully.');
-                form.reset();
+                if (response.ok) {
+                    // Success
+                    showFormMessage('success', 'Thank you! Your message has been sent successfully. We\'ll get back to you soon!');
+                    form.reset();
+                } else {
+                    // Formspree returned an error
+                    const data = await response.json();
+                    throw new Error(data.error || 'Submission failed');
+                }
             } catch (error) {
-                // Show error message
-                showFormMessage('error', 'Oops! Something went wrong. Please try again.');
+                console.error('Contact form submission error:', error);
+                showFormMessage('error', 'Oops! Something went wrong. Please try again or email us directly at hello@studyshorts.com');
             } finally {
                 // Remove loading state
+                submitBtn.disabled = false;
                 submitBtn.classList.remove('loading');
                 submitBtn.textContent = originalText;
             }
         });
     }
-}
-
-// Simulate form submission (for demo purposes)
-function simulateFormSubmission(data) {
-    return new Promise((resolve, reject) => {
-        // Simulate network delay
-        setTimeout(() => {
-            // Simulate successful submission
-            console.log('Form submitted:', data);
-            resolve({ success: true });
-        }, 1500);
-    });
 }
 
 // Show form message
@@ -264,4 +273,5 @@ function throttle(func, limit) {
         }
     };
 }
+
 
