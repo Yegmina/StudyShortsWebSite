@@ -155,7 +155,7 @@ function initContactForm() {
                 form.reset();
             } catch (error) {
                 console.error('Contact form submission error:', error);
-                showFormMessage('error', 'Oops! Something went wrong. Please try again or email us directly at hello@studyshorts.com');
+                showFormMessage('error', 'Oops! Something went wrong. Please try again or email us directly at main@studyshorts.net');
             } finally {
                 // Remove loading state
                 submitBtn.disabled = false;
