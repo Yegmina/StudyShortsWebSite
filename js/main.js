@@ -112,8 +112,11 @@ function initActiveNavOnScroll() {
     updateActiveNav(); // Initial check
 }
 
-// Contact Form Handler - Formspree Integration
-const FORMSPREE_CONTACT_ENDPOINT = 'https://formspree.io/f/xzznwjvg'; // Same endpoint, different subject
+// Contact Form Handler - Formspree Integration (duplicate submissions to both endpoints)
+const FORMSPREE_CONTACT_ENDPOINTS = [
+    'https://formspree.io/f/xzznwjvg',
+    'https://formspree.io/f/xpqakezr'
+]; // Both endpoints will receive the submission
 
 function initContactForm() {
     const form = document.getElementById('contactForm');
@@ -144,24 +147,12 @@ function initContactForm() {
             formData.append('message', `Contact Form Submission:\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`);
             
             try {
-                // Submit to Formspree
-                const response = await fetch(FORMSPREE_CONTACT_ENDPOINT, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+                // Submit to all Formspree endpoints
+                await sendContactToFormspree(FORMSPREE_CONTACT_ENDPOINTS, formData);
                 
-                if (response.ok) {
-                    // Success
-                    showFormMessage('success', 'Thank you! Your message has been sent successfully. We\'ll get back to you soon!');
-                    form.reset();
-                } else {
-                    // Formspree returned an error
-                    const data = await response.json();
-                    throw new Error(data.error || 'Submission failed');
-                }
+                // Success
+                showFormMessage('success', 'Thank you! Your message has been sent successfully. We\'ll get back to you soon!');
+                form.reset();
             } catch (error) {
                 console.error('Contact form submission error:', error);
                 showFormMessage('error', 'Oops! Something went wrong. Please try again or email us directly at hello@studyshorts.com');
@@ -200,6 +191,32 @@ function showFormMessage(type, message) {
     setTimeout(() => {
         messageEl.remove();
     }, 5000);
+}
+
+// Submit contact form to multiple Formspree endpoints
+async function sendContactToFormspree(endpoints, formData) {
+    const responses = await Promise.all(
+        endpoints.map(endpoint =>
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+                headers: { 'Accept': 'application/json' }
+            })
+        )
+    );
+    
+    const failed = responses.filter(r => !r.ok);
+    if (failed.length > 0) {
+        const firstError = failed[0];
+        let details = '';
+        try {
+            const data = await firstError.json();
+            details = data.error || '';
+        } catch (_) {
+            // ignore parse errors
+        }
+        throw new Error(details || 'Submission failed');
+    }
 }
 
 // Navbar scroll effect

@@ -1,7 +1,10 @@
 // Waitlist Modal and Formspree Integration
 
-// Formspree Configuration
-const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xzznwjvg';
+// Formspree Configuration (duplicate submissions to both endpoints)
+const FORMSPREE_ENDPOINTS = [
+    'https://formspree.io/f/xzznwjvg',
+    'https://formspree.io/f/xpqakezr'
+];
 
 // Open Waitlist Modal
 function openWaitlistModal() {
@@ -89,24 +92,12 @@ function initWaitlistForm() {
             formData.append('message', `New waitlist signup:\n\nEmail: ${email}\nName: ${name}\nTimestamp: ${timestamp}\nSource: Website Waitlist`);
             
             try {
-                // Submit to Formspree
-                const response = await fetch(FORMSPREE_ENDPOINT, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+                // Submit to all Formspree endpoints
+                await sendToFormspree(FORMSPREE_ENDPOINTS, formData);
                 
-                if (response.ok) {
-                    // Success
-                    showWaitlistMessage('success', 'Thank you! You\'ve been added to our waitlist. We\'ll notify you when we launch!');
-                    form.reset();
-                } else {
-                    // Formspree returned an error
-                    const data = await response.json();
-                    throw new Error(data.error || 'Submission failed');
-                }
+                // Success
+                showWaitlistMessage('success', 'Thank you! You\'ve been added to our waitlist. We\'ll notify you when we launch!');
+                form.reset();
             } catch (error) {
                 console.error('Waitlist submission error:', error);
                 showWaitlistMessage('error', 'Oops! Something went wrong. Please try again or contact us directly.');
@@ -129,6 +120,32 @@ function showWaitlistMessage(type, message) {
         
         // Scroll to message
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+// Submit to multiple Formspree endpoints
+async function sendToFormspree(endpoints, formData) {
+    const responses = await Promise.all(
+        endpoints.map(endpoint =>
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+                headers: { 'Accept': 'application/json' }
+            })
+        )
+    );
+    
+    const failed = responses.filter(r => !r.ok);
+    if (failed.length > 0) {
+        const firstError = failed[0];
+        let details = '';
+        try {
+            const data = await firstError.json();
+            details = data.error || '';
+        } catch (_) {
+            // ignore parse errors
+        }
+        throw new Error(details || 'Submission failed');
     }
 }
 
