@@ -278,8 +278,26 @@
                     <input type="email" id="waitlist-email" name="email" required placeholder="your.email@example.com">
                 </div>
                 <div class="form-group">
-                    <label for="waitlist-name">Name (Optional)</label>
-                    <input type="text" id="waitlist-name" name="name" placeholder="Your name">
+                    <label for="waitlist-name">Name</label>
+                    <input type="text" id="waitlist-name" name="name" required placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label>OS Used (select one or more)</label>
+                    <div class="waitlist-os-options">
+                        <label class="waitlist-os-option">
+                            <input type="checkbox" name="os_used" value="android">
+                            <span>Android</span>
+                        </label>
+                        <label class="waitlist-os-option">
+                            <input type="checkbox" name="os_used" value="ios">
+                            <span>iOS</span>
+                        </label>
+                        <label class="waitlist-os-option">
+                            <input type="checkbox" id="waitlist-os-other-check" name="os_used" value="other">
+                            <span>Other</span>
+                        </label>
+                    </div>
+                    <input type="text" id="waitlist-os-other-text" name="other_os_text" placeholder="If other, please specify" style="display:none; margin-top: 10px;">
                 </div>
                 <button type="submit" class="btn btn-primary btn-full">Join Waitlist</button>
                 <div id="waitlist-message" class="waitlist-message"></div>
@@ -288,7 +306,9 @@
     </div>
 
     <script src="js/main.js"></script>
+    <script>
+        window.STUDYSHORTS_REGISTRATION_ENDPOINT = 'https://beta-api.studyshorts.net/api/v1/registrations';
+    </script>
     <script src="js/waitlist.js"></script>
 </body>
 </html>
-

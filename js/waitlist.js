@@ -1,17 +1,22 @@
-// Waitlist Modal and Formspree Integration
+// Waitlist Modal, Beta Registration API, and Formspree legacy notifier
 
-// Formspree Configuration (duplicate submissions to both endpoints)
+// Legacy Formspree configuration (keep existing email notifications active)
 const FORMSPREE_ENDPOINTS = [
     'https://formspree.io/f/xzznwjvg',
     'https://formspree.io/f/xpqakezr'
 ];
+
+// Backend registration endpoint (can be overridden before this script loads)
+const REGISTRATION_ENDPOINT =
+    window.STUDYSHORTS_REGISTRATION_ENDPOINT || '/api/v1/registrations';
+const REGISTRATION_SOURCE = 'website_waitlist';
 
 // Open Waitlist Modal
 function openWaitlistModal() {
     const modal = document.getElementById('waitlistModal');
     if (modal) {
         modal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
     }
 }
 
@@ -20,17 +25,22 @@ function closeWaitlistModal() {
     const modal = document.getElementById('waitlistModal');
     if (modal) {
         modal.classList.remove('active');
-        document.body.style.overflow = ''; // Restore scrolling
-        // Reset form
-        const form = document.getElementById('waitlistForm');
-        if (form) {
-            form.reset();
-            const message = document.getElementById('waitlist-message');
-            if (message) {
-                message.style.display = 'none';
-                message.className = 'waitlist-message';
-            }
-        }
+        document.body.style.overflow = '';
+        resetWaitlistForm();
+    }
+}
+
+function resetWaitlistForm() {
+    const form = document.getElementById('waitlistForm');
+    if (form) {
+        form.reset();
+        toggleOtherOsInput(form);
+    }
+
+    const message = document.getElementById('waitlist-message');
+    if (message) {
+        message.style.display = 'none';
+        message.className = 'waitlist-message';
     }
 }
 
@@ -44,70 +54,220 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Close modal on Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            const modal = document.getElementById('waitlistModal');
-            if (modal && modal.classList.contains('active')) {
+            const activeModal = document.getElementById('waitlistModal');
+            if (activeModal && activeModal.classList.contains('active')) {
                 closeWaitlistModal();
             }
         }
     });
-    
-    // Initialize waitlist form
+
     initWaitlistForm();
 });
 
 // Initialize Waitlist Form
 function initWaitlistForm() {
     const form = document.getElementById('waitlistForm');
-    
-    if (form) {
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            const messageEl = document.getElementById('waitlist-message');
-            
-            // Disable form and show loading
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Joining...';
-            if (messageEl) {
-                messageEl.style.display = 'none';
-                messageEl.className = 'waitlist-message';
-            }
-            
-            // Get form data
-            const email = form.querySelector('#waitlist-email').value.trim();
-            const name = form.querySelector('#waitlist-name').value.trim() || 'Not provided';
-            const timestamp = new Date().toISOString();
-            
-            // Prepare data for Formspree
-            const formData = new FormData();
-            formData.append('email', email);
-            formData.append('name', name);
-            formData.append('_subject', `New Waitlist Signup - StudyShorts`);
-            formData.append('message', `New waitlist signup:\n\nEmail: ${email}\nName: ${name}\nTimestamp: ${timestamp}\nSource: Website Waitlist`);
-            
-            try {
-                // Submit to all Formspree endpoints
-                await sendToFormspree(FORMSPREE_ENDPOINTS, formData);
-                
-                // Success
-                showWaitlistMessage('success', 'Thank you! You\'ve been added to our waitlist. We\'ll notify you when we launch!');
-                form.reset();
-            } catch (error) {
-                console.error('Waitlist submission error:', error);
-                showWaitlistMessage('error', 'Oops! Something went wrong. Please try again or contact us directly.');
-            } finally {
-                // Re-enable form
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-            }
+
+    if (!form) {
+        return;
+    }
+
+    const otherCheckbox = form.querySelector('#waitlist-os-other-check');
+    if (otherCheckbox) {
+        otherCheckbox.addEventListener('change', function() {
+            toggleOtherOsInput(form);
         });
     }
+    toggleOtherOsInput(form);
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        const messageEl = document.getElementById('waitlist-message');
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Joining...';
+        if (messageEl) {
+            messageEl.style.display = 'none';
+            messageEl.className = 'waitlist-message';
+        }
+
+        const email = form.querySelector('#waitlist-email').value.trim();
+        const name = form.querySelector('#waitlist-name').value.trim();
+        const osUsed = getSelectedOsValues(form);
+        const otherOsText = getOtherOsText(form, osUsed);
+        const timestamp = new Date().toISOString();
+
+        if (!email || !name) {
+            showWaitlistMessage('error', 'Please enter your email and name.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        if (osUsed.length === 0) {
+            showWaitlistMessage('error', 'Please select at least one option in OS Used.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        const registrationPayload = {
+            email: email,
+            name: name,
+            os_used: osUsed,
+            other_os_text: otherOsText,
+            source: REGISTRATION_SOURCE
+        };
+
+        const legacyFormData = new FormData();
+        legacyFormData.append('email', email);
+        legacyFormData.append('name', name);
+        legacyFormData.append('os_used', osUsed.join(', '));
+        legacyFormData.append('other_os_text', otherOsText || '');
+        legacyFormData.append('_subject', 'New Waitlist Signup - StudyShorts');
+        legacyFormData.append(
+            'message',
+            `New waitlist signup:\n\nEmail: ${email}\nName: ${name}\nOS Used: ${osUsed.join(', ')}\nOther OS Text: ${otherOsText || 'Not provided'}\nTimestamp: ${timestamp}\nSource: ${REGISTRATION_SOURCE}`
+        );
+
+        try {
+            await submitRegistration(registrationPayload);
+
+            try {
+                // Keep legacy email notifier but do not fail registration if this path fails.
+                await sendToFormspree(FORMSPREE_ENDPOINTS, legacyFormData);
+            } catch (legacyError) {
+                console.warn('Legacy Formspree notification failed:', legacyError);
+            }
+
+            showWaitlistMessage('success', 'Thank you! You\'ve been added to our waitlist. We\'ll notify you when we launch!');
+            form.reset();
+            toggleOtherOsInput(form);
+        } catch (error) {
+            console.error('Waitlist registration error:', error);
+            showWaitlistMessage('error', getWaitlistErrorMessage(error));
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    });
+}
+
+function toggleOtherOsInput(form) {
+    const otherCheckbox = form.querySelector('#waitlist-os-other-check');
+    const otherTextInput = form.querySelector('#waitlist-os-other-text');
+    if (!otherCheckbox || !otherTextInput) {
+        return;
+    }
+
+    if (otherCheckbox.checked) {
+        otherTextInput.style.display = 'block';
+    } else {
+        otherTextInput.style.display = 'none';
+        otherTextInput.value = '';
+    }
+}
+
+function getSelectedOsValues(form) {
+    const values = new Set();
+    const checked = form.querySelectorAll('input[name="os_used"]:checked');
+    checked.forEach(function(input) {
+        const value = input.value.trim().toLowerCase();
+        if (value) {
+            values.add(value);
+        }
+    });
+    return Array.from(values);
+}
+
+function getOtherOsText(form, osUsed) {
+    const otherTextInput = form.querySelector('#waitlist-os-other-text');
+    if (!otherTextInput) {
+        return null;
+    }
+
+    if (!osUsed.includes('other')) {
+        otherTextInput.value = '';
+        return null;
+    }
+
+    const value = otherTextInput.value.trim();
+    return value ? value : null;
+}
+
+async function submitRegistration(payload) {
+    const response = await fetch(REGISTRATION_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    let data = null;
+    try {
+        data = await response.json();
+    } catch (_) {
+        // Ignore non-JSON payloads
+    }
+
+    if (!response.ok) {
+        const error = new Error(buildApiErrorMessage(response.status, data));
+        error.status = response.status;
+        error.data = data;
+        throw error;
+    }
+
+    return data || {};
+}
+
+function buildApiErrorMessage(status, data) {
+    if (data && typeof data.message === 'string') {
+        if (
+            status === 422 &&
+            Array.isArray(data.errors) &&
+            data.errors.length > 0
+        ) {
+            const first = data.errors[0];
+            if (typeof first === 'string') {
+                return first;
+            }
+            if (first && typeof first === 'object') {
+                if (typeof first.message === 'string') {
+                    return first.message;
+                }
+                if (typeof first.msg === 'string') {
+                    return first.msg;
+                }
+            }
+        }
+        return data.message;
+    }
+
+    if (status === 422) {
+        return 'Please check your details and try again.';
+    }
+
+    if (status >= 500) {
+        return 'The registration service is temporarily unavailable. Please try again.';
+    }
+
+    return 'Could not save your registration. Please try again.';
+}
+
+function getWaitlistErrorMessage(error) {
+    if (error && typeof error.message === 'string' && error.message.trim()) {
+        return error.message;
+    }
+    return 'Oops! Something went wrong. Please try again.';
 }
 
 // Show waitlist message
@@ -117,8 +277,6 @@ function showWaitlistMessage(type, message) {
         messageEl.textContent = message;
         messageEl.className = `waitlist-message ${type}`;
         messageEl.style.display = 'block';
-        
-        // Scroll to message
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
@@ -126,16 +284,16 @@ function showWaitlistMessage(type, message) {
 // Submit to multiple Formspree endpoints
 async function sendToFormspree(endpoints, formData) {
     const responses = await Promise.all(
-        endpoints.map(endpoint =>
-            fetch(endpoint, {
+        endpoints.map(function(endpoint) {
+            return fetch(endpoint, {
                 method: 'POST',
                 body: formData,
                 headers: { 'Accept': 'application/json' }
-            })
-        )
+            });
+        })
     );
-    
-    const failed = responses.filter(r => !r.ok);
+
+    const failed = responses.filter(function(response) { return !response.ok; });
     if (failed.length > 0) {
         const firstError = failed[0];
         let details = '';
@@ -143,9 +301,9 @@ async function sendToFormspree(endpoints, formData) {
             const data = await firstError.json();
             details = data.error || '';
         } catch (_) {
-            // ignore parse errors
+            // Ignore parse errors
         }
-        throw new Error(details || 'Submission failed');
+        throw new Error(details || 'Legacy Formspree submission failed');
     }
 }
 

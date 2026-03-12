@@ -1196,7 +1196,8 @@ p {
     font-size: 14px;
 }
 
-.waitlist-form input {
+.waitlist-form input[type="text"],
+.waitlist-form input[type="email"] {
     width: 100%;
     padding: 14px 18px;
     border: 2px solid #e0e0e0;
@@ -1207,14 +1208,46 @@ p {
     background: var(--white);
 }
 
-.waitlist-form input:focus {
+.waitlist-form input[type="text"]:focus,
+.waitlist-form input[type="email"]:focus {
     outline: none;
     border-color: var(--primary-blue);
     box-shadow: 0 0 0 3px rgba(145, 188, 225, 0.1);
 }
 
-.waitlist-form input::placeholder {
+.waitlist-form input[type="text"]::placeholder,
+.waitlist-form input[type="email"]::placeholder {
     color: #b0b0b0;
+}
+
+.waitlist-os-options {
+    display: grid;
+    gap: 10px;
+}
+
+.waitlist-os-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--border-radius-md);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-weight: 500;
+    color: var(--gray-dark);
+    background: var(--white);
+}
+
+.waitlist-os-option:hover {
+    border-color: var(--primary-blue);
+}
+
+.waitlist-os-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--dark-blue);
 }
 
 .waitlist-message {
@@ -1277,5 +1310,4 @@ p {
         font-size: 28px;
     }
 }
-
 
