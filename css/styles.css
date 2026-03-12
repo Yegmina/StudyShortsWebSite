@@ -1220,34 +1220,61 @@ p {
     color: #b0b0b0;
 }
 
-.waitlist-os-options {
-    display: grid;
-    gap: 10px;
-}
-
-.waitlist-os-option {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border: 2px solid #e0e0e0;
-    border-radius: var(--border-radius-md);
-    padding: 10px 12px;
-    cursor: pointer;
-    transition: var(--transition-fast);
+.waitlist-os-title {
+    margin: 0 0 10px;
     font-weight: 500;
     color: var(--gray-dark);
-    background: var(--white);
+    font-size: 14px;
 }
 
-.waitlist-os-option:hover {
+.waitlist-form .waitlist-os-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.waitlist-form .waitlist-os-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 0;
+    border: 2px solid #dfe6ef;
+    border-radius: var(--border-radius-md);
+    padding: 12px 10px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--gray-dark);
+    background: #f8fbff;
+}
+
+.waitlist-form .waitlist-os-option:hover {
     border-color: var(--primary-blue);
+    background: #f1f7ff;
 }
 
-.waitlist-os-option input[type="checkbox"] {
+.waitlist-form .waitlist-os-option:has(input[type="checkbox"]:checked) {
+    border-color: #1f3fa8;
+    background: #eaf1ff;
+    box-shadow: 0 0 0 2px rgba(3, 7, 121, 0.08);
+}
+
+.waitlist-form .waitlist-os-option input[type="checkbox"] {
     width: 18px;
     height: 18px;
     margin: 0;
     accent-color: var(--dark-blue);
+    flex-shrink: 0;
+}
+
+.waitlist-form .waitlist-os-option span {
+    line-height: 1.1;
+}
+
+.waitlist-form .waitlist-other-input {
+    margin-top: 12px;
 }
 
 .waitlist-message {
@@ -1310,4 +1337,3 @@ p {
         font-size: 28px;
     }
 }
-
