@@ -278,8 +278,8 @@
                     <input type="email" id="waitlist-email" name="email" required placeholder="your.email@example.com">
                 </div>
                 <div class="form-group">
-                    <label for="waitlist-name">Name</label>
-                    <input type="text" id="waitlist-name" name="name" required placeholder="Your name">
+                    <label for="waitlist-name">Name (Optional)</label>
+                    <input type="text" id="waitlist-name" name="name" placeholder="Your name">
                 </div>
                 <div class="form-group">
                     <p class="waitlist-os-title">OS Used (select one or more)</p>
@@ -298,6 +298,28 @@
                         </label>
                     </div>
                     <input type="text" id="waitlist-os-other-text" class="waitlist-other-input" name="other_os_text" placeholder="If other, please specify" style="display:none;">
+                </div>
+                <div class="form-group">
+                    <p class="waitlist-os-title">Country of Studies (Optional)</p>
+                    <div class="waitlist-os-options">
+                        <label class="waitlist-os-option">
+                            <input type="checkbox" name="country_of_studies" value="germany">
+                            <span>Germany</span>
+                        </label>
+                        <label class="waitlist-os-option">
+                            <input type="checkbox" name="country_of_studies" value="finland">
+                            <span>Finland</span>
+                        </label>
+                        <label class="waitlist-os-option">
+                            <input type="checkbox" name="country_of_studies" value="ukraine">
+                            <span>Ukraine</span>
+                        </label>
+                        <label class="waitlist-os-option">
+                            <input type="checkbox" id="waitlist-country-other-check" name="country_of_studies" value="other">
+                            <span>Other</span>
+                        </label>
+                    </div>
+                    <input type="text" id="waitlist-country-other-text" class="waitlist-other-input" name="other_country_of_studies" placeholder="If other, please specify" style="display:none;">
                 </div>
                 <button type="submit" class="btn btn-primary btn-full">Join Waitlist</button>
                 <div id="waitlist-message" class="waitlist-message"></div>

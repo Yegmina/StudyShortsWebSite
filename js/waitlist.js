@@ -34,7 +34,7 @@ function resetWaitlistForm() {
     const form = document.getElementById('waitlistForm');
     if (form) {
         form.reset();
-        toggleOtherOsInput(form);
+        syncOptionalFieldVisibility(form);
     }
 
     const message = document.getElementById('waitlist-message');
@@ -79,10 +79,16 @@ function initWaitlistForm() {
     const otherCheckbox = form.querySelector('#waitlist-os-other-check');
     if (otherCheckbox) {
         otherCheckbox.addEventListener('change', function() {
-            toggleOtherOsInput(form);
+            syncOptionalFieldVisibility(form);
         });
     }
-    toggleOtherOsInput(form);
+    const countryOtherCheckbox = form.querySelector('#waitlist-country-other-check');
+    if (countryOtherCheckbox) {
+        countryOtherCheckbox.addEventListener('change', function() {
+            syncOptionalFieldVisibility(form);
+        });
+    }
+    syncOptionalFieldVisibility(form);
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -102,10 +108,18 @@ function initWaitlistForm() {
         const name = form.querySelector('#waitlist-name').value.trim();
         const osUsed = getSelectedOsValues(form);
         const otherOsText = getOtherOsText(form, osUsed);
+        const countriesOfStudies = getSelectedValues(form, 'country_of_studies');
+        const otherCountryOfStudies = getConditionalTextValue(
+            form,
+            '#waitlist-country-other-text',
+            countriesOfStudies,
+            'other'
+        );
         const timestamp = new Date().toISOString();
+        const normalizedName = name || 'Not provided';
 
-        if (!email || !name) {
-            showWaitlistMessage('error', 'Please enter your email and name.');
+        if (!email) {
+            showWaitlistMessage('error', 'Please enter your email.');
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
             return;
@@ -120,7 +134,7 @@ function initWaitlistForm() {
 
         const registrationPayload = {
             email: email,
-            name: name,
+            name: normalizedName,
             os_used: osUsed,
             other_os_text: otherOsText,
             source: REGISTRATION_SOURCE
@@ -128,13 +142,15 @@ function initWaitlistForm() {
 
         const legacyFormData = new FormData();
         legacyFormData.append('email', email);
-        legacyFormData.append('name', name);
+        legacyFormData.append('name', normalizedName);
         legacyFormData.append('os_used', osUsed.join(', '));
         legacyFormData.append('other_os_text', otherOsText || '');
+        legacyFormData.append('country_of_studies', countriesOfStudies.join(', '));
+        legacyFormData.append('other_country_of_studies', otherCountryOfStudies || '');
         legacyFormData.append('_subject', 'New Waitlist Signup - StudyShorts');
         legacyFormData.append(
             'message',
-            `New waitlist signup:\n\nEmail: ${email}\nName: ${name}\nOS Used: ${osUsed.join(', ')}\nOther OS Text: ${otherOsText || 'Not provided'}\nTimestamp: ${timestamp}\nSource: ${REGISTRATION_SOURCE}`
+            `New waitlist signup:\n\nEmail: ${email}\nName: ${normalizedName}\nOS Used: ${osUsed.join(', ')}\nOther OS Text: ${otherOsText || 'Not provided'}\nCountry of Studies: ${countriesOfStudies.length > 0 ? countriesOfStudies.join(', ') : 'Not provided'}\nOther Country of Studies: ${otherCountryOfStudies || 'Not provided'}\nTimestamp: ${timestamp}\nSource: ${REGISTRATION_SOURCE}`
         );
 
         try {
@@ -149,7 +165,7 @@ function initWaitlistForm() {
 
             showWaitlistMessage('success', 'Thank you! You\'ve been added to our waitlist. We\'ll notify you when we launch!');
             form.reset();
-            toggleOtherOsInput(form);
+            syncOptionalFieldVisibility(form);
         } catch (error) {
             console.error('Waitlist registration error:', error);
             showWaitlistMessage('error', getWaitlistErrorMessage(error));
@@ -160,9 +176,22 @@ function initWaitlistForm() {
     });
 }
 
-function toggleOtherOsInput(form) {
-    const otherCheckbox = form.querySelector('#waitlist-os-other-check');
-    const otherTextInput = form.querySelector('#waitlist-os-other-text');
+function syncOptionalFieldVisibility(form) {
+    toggleConditionalTextInput(
+        form,
+        '#waitlist-os-other-check',
+        '#waitlist-os-other-text'
+    );
+    toggleConditionalTextInput(
+        form,
+        '#waitlist-country-other-check',
+        '#waitlist-country-other-text'
+    );
+}
+
+function toggleConditionalTextInput(form, checkboxSelector, inputSelector) {
+    const otherCheckbox = form.querySelector(checkboxSelector);
+    const otherTextInput = form.querySelector(inputSelector);
     if (!otherCheckbox || !otherTextInput) {
         return;
     }
@@ -175,9 +204,9 @@ function toggleOtherOsInput(form) {
     }
 }
 
-function getSelectedOsValues(form) {
+function getSelectedValues(form, fieldName) {
     const values = new Set();
-    const checked = form.querySelectorAll('input[name="os_used"]:checked');
+    const checked = form.querySelectorAll(`input[name="${fieldName}"]:checked`);
     checked.forEach(function(input) {
         const value = input.value.trim().toLowerCase();
         if (value) {
@@ -187,13 +216,26 @@ function getSelectedOsValues(form) {
     return Array.from(values);
 }
 
+function getSelectedOsValues(form) {
+    return getSelectedValues(form, 'os_used');
+}
+
 function getOtherOsText(form, osUsed) {
-    const otherTextInput = form.querySelector('#waitlist-os-other-text');
+    return getConditionalTextValue(
+        form,
+        '#waitlist-os-other-text',
+        osUsed,
+        'other'
+    );
+}
+
+function getConditionalTextValue(form, inputSelector, selectedValues, triggerValue) {
+    const otherTextInput = form.querySelector(inputSelector);
     if (!otherTextInput) {
         return null;
     }
 
-    if (!osUsed.includes('other')) {
+    if (!selectedValues.includes(triggerValue)) {
         otherTextInput.value = '';
         return null;
     }
